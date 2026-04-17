@@ -1,4 +1,4 @@
-const BASE = "https://eeg-project-production.up.railway.app/api";
+const BASE = "http://localhost:8000/api";";
 
 async function request(path, options = {}) {
   try {
