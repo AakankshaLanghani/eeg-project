@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback, createContext, useContext } from "react";
 import * as api from "./api";
+import AdminApp from "./AdminApp";
 
 // ─── THEME ────────────────────────────────────────────────────────────────────
 const ThemeCtx = createContext({});
@@ -129,6 +130,97 @@ function Modal({ children, onClose, title, width=520 }) {
             color:T.textMuted, display:"flex", padding:4 }}>{Icons.close}</button>
         </div>
         <div style={{ padding:22 }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MESSAGING PANEL ─────────────────────────────────────────────────────────
+function MessagingPanel({ patientId, senderRole }) {
+  const T=useT();
+  const [messages,setMessages]=useState([]);
+  const [input,setInput]=useState(""), [sending,setSending]=useState(false);
+  const bottomRef=useRef(null);
+
+  const loadMsgs=useCallback(()=>{
+    if(!patientId)return;
+    api.getMessages(patientId).then(r=>setMessages(r.messages||[])).catch(()=>{});
+  },[patientId]);
+
+  useEffect(()=>{ loadMsgs(); },[loadMsgs]);
+
+  // Poll every 3s for new messages
+  useEffect(()=>{
+    const iv=setInterval(loadMsgs,3000);
+    return()=>clearInterval(iv);
+  },[loadMsgs]);
+
+  // Scroll to bottom when new messages arrive
+  useEffect(()=>{ bottomRef.current?.scrollIntoView({behavior:"smooth"}); },[messages]);
+
+  const send=async()=>{
+    const txt=input.trim();
+    if(!txt||sending)return;
+    setSending(true);
+    setInput("");
+    try{
+      const r=await api.sendMessage(patientId,senderRole,txt);
+      setMessages(m=>[...m,r.message]);
+    }catch{ setInput(txt); } // restore on error
+    finally{ setSending(false); }
+  };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",height:340}}>
+      {/* message list */}
+      <div style={{flex:1,overflowY:"auto",padding:"12px 0",display:"flex",flexDirection:"column",gap:10}}>
+        {messages.length===0&&(
+          <div style={{textAlign:"center",color:T.textMuted,fontSize:13,marginTop:40}}>
+            No messages yet. Start the conversation!
+          </div>
+        )}
+        {messages.map(m=>{
+          const mine=m.sender_role===senderRole;
+          return (
+            <div key={m.id} style={{display:"flex",justifyContent:mine?"flex-end":"flex-start",gap:8}}>
+              {!mine&&(
+                <div style={{width:28,height:28,borderRadius:8,background:"linear-gradient(135deg,#093095,#2E5BE8)",
+                  display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0,alignSelf:"flex-end"}}>
+                  {m.sender_role==="Doctor"?"👨‍⚕️":"🏥"}
+                </div>
+              )}
+              <div style={{maxWidth:"72%"}}>
+                {!mine&&<div style={{fontSize:10,color:T.textMuted,marginBottom:3,fontWeight:500}}>{m.sender_role}</div>}
+                <div style={{
+                  background:mine?"linear-gradient(135deg,#093095,#2E5BE8)":T.inputBg,
+                  color:mine?"#fff":T.text,
+                  padding:"9px 13px",fontSize:13,lineHeight:1.55,
+                  borderRadius:mine?"14px 14px 4px 14px":"14px 14px 14px 4px",
+                  border:mine?"none":`1px solid ${T.divider}`}}>
+                  {m.content}
+                </div>
+                <div style={{fontSize:10,color:T.textMuted,marginTop:3,textAlign:mine?"right":"left"}}>{m.sent_at}</div>
+              </div>
+            </div>
+          );
+        })}
+        <div ref={bottomRef}/>
+      </div>
+      {/* input row */}
+      <div style={{paddingTop:12,borderTop:`1px solid ${T.divider}`,display:"flex",gap:8,alignItems:"center"}}>
+        <input value={input} onChange={e=>setInput(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&send()}
+          placeholder={`Message as ${senderRole}…`}
+          style={{flex:1,padding:"9px 13px",borderRadius:10,border:`1px solid ${T.divider}`,
+            background:T.inputBg,color:T.text,fontSize:13,outline:"none",fontFamily:"inherit"}}
+          onFocus={e=>e.target.style.borderColor="#093095"}
+          onBlur={e=>e.target.style.borderColor=T.divider}/>
+        <button onClick={send} disabled={sending||!input.trim()}
+          style={{width:38,height:38,flexShrink:0,borderRadius:10,border:"none",cursor:sending?"not-allowed":"pointer",
+            background:input.trim()?"linear-gradient(135deg,#093095,#2E5BE8)":"#C3CCDF",
+            color:"#fff",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",transition:"background .15s"}}>
+          {sending?<Spinner size={14}/>:"➤"}
+        </button>
       </div>
     </div>
   );
@@ -1009,7 +1101,7 @@ function PatientDetailPage({ patient, onBack, showToast, sessionSecs, lastConf }
         <EmotionLegend/>
       </Card>
       {/* Notes */}
-      <Card>
+      <Card style={{marginBottom:20}}>
         <SectionTitle>Doctor Notes</SectionTitle>
         {notes.length>0&&<div style={{marginBottom:16,display:"flex",flexDirection:"column",gap:8}}>
           {notes.map((n,i)=>(
@@ -1024,12 +1116,28 @@ function PatientDetailPage({ patient, onBack, showToast, sessionSecs, lastConf }
             background:T.inputBg,fontSize:13,resize:"vertical",minHeight:80,outline:"none",color:T.text,lineHeight:1.6}}
           onFocus={e=>e.target.style.borderColor="#093095"}
           onBlur={e=>e.target.style.borderColor=T.divider}/>
-        <button onClick={saveNote} disabled={saving} style={{marginTop:10,padding:"10px 22px",borderRadius:10,
-          background:saving?"#C3CCDF":"linear-gradient(135deg,#093095,#2E5BE8)",color:"#fff",border:"none",
-          fontSize:13,cursor:saving?"not-allowed":"pointer",fontWeight:600,
-          display:"flex",alignItems:"center",gap:8,boxShadow:saving?"none":"0 4px 14px rgba(9,48,149,.3)"}}>
-          {saving&&<Spinner size={14}/>}{saving?"Saving…":"Save Note"}
-        </button>
+        <div style={{display:"flex",gap:10,marginTop:10,flexWrap:"wrap"}}>
+          <button onClick={saveNote} disabled={saving} style={{padding:"10px 22px",borderRadius:10,
+            background:saving?"#C3CCDF":"linear-gradient(135deg,#093095,#2E5BE8)",color:"#fff",border:"none",
+            fontSize:13,cursor:saving?"not-allowed":"pointer",fontWeight:600,
+            display:"flex",alignItems:"center",gap:8,boxShadow:saving?"none":"0 4px 14px rgba(9,48,149,.3)"}}>
+            {saving&&<Spinner size={14}/>}{saving?"Saving…":"Save Note"}
+          </button>
+          <a href={api.downloadReport(patient.id)} target="_blank" rel="noreferrer"
+            style={{padding:"10px 18px",borderRadius:10,background:"#EDE9FE",color:"#6D28D9",
+              border:"1px solid #DDD6FE",fontSize:13,fontWeight:600,cursor:"pointer",
+              display:"flex",alignItems:"center",gap:6,textDecoration:"none"}}>
+            {Icons.print} Download PDF Report
+          </a>
+        </div>
+      </Card>
+      {/* Messaging */}
+      <Card>
+        <SectionTitle>
+          💬 Patient Messaging
+          <span style={{fontSize:11,color:T.textMuted,fontWeight:400,marginLeft:4}}>— live chat with patient</span>
+        </SectionTitle>
+        <MessagingPanel patientId={patient.id} senderRole="Doctor"/>
       </Card>
     </div>
   );
@@ -1356,7 +1464,7 @@ function BreathingGuide({ visible }) {
 }
 
 // ─── PATIENT DASHBOARD ────────────────────────────────────────────────────────
-function PatientDashboard({ onLogout, userName, doctorName }) {
+function PatientDashboard({ onLogout, userName, doctorName, patientId }) {
   const T=useT();
   const [tab,setTab]=useState(0);
   const [emotion,setEmotion]=useState("Calm"), [conf,setConf]=useState(87);
@@ -1365,10 +1473,6 @@ function PatientDashboard({ onLogout, userName, doctorName }) {
   const [painVal,setPainVal]=useState(0), [painSent,setPainSent]=useState(false);
   const [moodSent,setMoodSent]=useState(false);
   const [attentionSent,setAttentionSent]=useState(false);
-  const [docMessages,setDocMessages]=useState([
-    {time:"9:14 AM",text:"Good morning! Your morning readings look stable. Keep resting."},
-    {time:"Yesterday",text:"Stress levels were elevated in the afternoon. Let us know if you feel discomfort."},
-  ]);
   const [toast,setToast]=useState(null);
 
   useEffect(()=>{
@@ -1677,29 +1781,18 @@ function PatientDashboard({ onLogout, userName, doctorName }) {
               </button>
             </div>
 
-            {/* Messages from Doctor */}
+            {/* Live Messaging */}
             <div style={{background:T.card,borderRadius:20,padding:"16px",
               marginBottom:16,border:"1px solid "+T.divider}}>
               <div style={{fontSize:14,fontWeight:700,color:T.text,marginBottom:14}}>
-                Messages from Your Doctor
+                💬 Chat with Your Doctor
               </div>
-              {docMessages.map((msg,i)=>(
-                <div key={i} style={{display:"flex",gap:10,marginBottom:14}}>
-                  <div style={{width:32,height:32,borderRadius:10,flexShrink:0,
-                    background:"linear-gradient(135deg,#093095,#2E5BE8)",
-                    display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>👨‍⚕️</div>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:12,color:T.textMuted,marginBottom:4}}>
-                      {doctorName||"Dr. Ummelaila"} · {msg.time}
-                    </div>
-                    <div style={{background:T.inputBg,borderRadius:"4px 14px 14px 14px",
-                      padding:"10px 13px",fontSize:13,color:T.text,
-                      lineHeight:1.55,border:"1px solid "+T.divider}}>
-                      {msg.text}
-                    </div>
+              {patientId
+                ? <MessagingPanel patientId={patientId} senderRole="Patient"/>
+                : <div style={{fontSize:13,color:T.textMuted,textAlign:"center",padding:"24px 0"}}>
+                    Loading messages…
                   </div>
-                </div>
-              ))}
+              }
             </div>
 
             {/* Quick info cards */}
@@ -2165,10 +2258,15 @@ function LoginPage({ onLogin }) {
   const [role,setRole]=useState("Doctor"), [email,setEmail]=useState("dr.johnson@hospital.com");
   const [pass,setPass]=useState("password"), [loading,setLoading]=useState(false);
   const [error,setError]=useState(""), [showPass,setShowPass]=useState(false);
-  const selectRole=r=>{setRole(r);setEmail(r==="Doctor"?"dr.johnson@hospital.com":"patient@hospital.com");setError("");};
+  const selectRole=r=>{
+    setRole(r);
+    setEmail(r==="Doctor"?"dr.johnson@hospital.com":r==="Patient"?"patient@hospital.com":"admin@hospital.com");
+    setPass(r==="Admin"?"admin123":"password");
+    setError("");
+  };
   const submit=async()=>{
     setError("");setLoading(true);
-    try{const r=await api.login(email,pass);onLogin(r.role,r.name);}
+    try{const r=await api.login(email,pass);onLogin(r.role,r.name,r.patient_id);}
     catch(e){setError(e.message||"Invalid credentials. Please try again.");}
     finally{setLoading(false);}
   };
@@ -2201,12 +2299,12 @@ function LoginPage({ onLogin }) {
           <div style={{fontSize:14,color:T.textMuted}}>Sign in to your NeuroTrack account</div>
         </div>
         <div style={{display:"flex",background:T.inputBg,borderRadius:12,padding:4,marginBottom:28,border:"1px solid "+T.divider}}>
-          {["Doctor","Patient"].map(r=>(
+          {[["Doctor","👨‍⚕️ Doctor"],["Patient","🏥 Patient"],["Admin","🛡️ Admin"]].map(([r,label])=>(
             <button key={r} onClick={()=>selectRole(r)}
-              style={{flex:1,padding:"9px 0",borderRadius:9,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,
-                background:role===r?"#093095":"transparent",
+              style={{flex:1,padding:"9px 0",borderRadius:9,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,
+                background:role===r?(r==="Admin"?"#6D28D9":"#093095"):"transparent",
                 color:role===r?"#fff":T.textSec,transition:"all .2s"}}>
-              {r==="Doctor"?"👨‍⚕️ Doctor":"🏥 Patient"}
+              {label}
             </button>
           ))}
         </div>
@@ -2235,9 +2333,9 @@ function LoginPage({ onLogin }) {
         </button>
         <div style={{padding:"14px 16px",background:T.inputBg,borderRadius:12,border:"1px solid "+T.divider}}>
           <div style={{fontSize:11,fontWeight:700,color:T.textMuted,textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Demo credentials</div>
-          {[["Doctor","dr.johnson@hospital.com"],["Patient","patient@hospital.com"]].map(([r,em])=>(
+          {[["Doctor","dr.johnson@hospital.com","password"],["Patient","patient@hospital.com","password"],["Admin","admin@hospital.com","admin123"]].map(([r,em,pw])=>(
             <div key={r} style={{fontSize:12,color:T.textSec,marginBottom:3}}>
-              <span style={{fontWeight:600,color:T.text}}>{r}:</span> {em} / password
+              <span style={{fontWeight:600,color:r==="Admin"?"#6D28D9":T.text}}>{r}:</span> {em} / {pw}
             </div>
           ))}
         </div>
@@ -2250,8 +2348,9 @@ function LoginPage({ onLogin }) {
 export default function App() {
   const [role,setRole]=useState(null), [userName,setUserName]=useState("");
   const [dark,setDark]=useState(false);
-  const handleLogin=(role,name)=>{setRole(role);setUserName(name);};
-  const handleLogout=()=>{setRole(null);setUserName("");};
+  const [patientId,setPatientId]=useState(null);
+  const handleLogin=(role,name,pid)=>{setRole(role);setUserName(name);setPatientId(pid||null);};
+  const handleLogout=()=>{setRole(null);setUserName("");setPatientId(null);};
   const T=dark?DARK:LIGHT;
   const GS=`
     @keyframes spin{to{transform:rotate(360deg)}}
@@ -2274,8 +2373,9 @@ export default function App() {
       <style>{GS}</style>
       <div style={{background:T.bg,minHeight:"100vh",transition:"background .2s,color .2s",color:T.text}}>
         {!role&&<LoginPage onLogin={handleLogin}/>}
-        {role==="Patient"&&<PatientDashboard onLogout={handleLogout} userName={userName} doctorName="Dr. Ummelaila"/>}
+        {role==="Patient"&&<PatientDashboard onLogout={handleLogout} userName={userName} doctorName="Dr. Ummelaila" patientId={patientId}/>}
         {role==="Doctor"&&<DoctorApp onLogout={handleLogout} userName={userName} dark={dark} setDark={setDark}/>}
+        {role==="Admin"&&<AdminApp onLogout={handleLogout} userName={userName} dark={dark} setDark={setDark}/>}
       </div>
     </ThemeCtx.Provider>
   );
