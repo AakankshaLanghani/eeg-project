@@ -543,7 +543,7 @@ const NAV=[
 ];
 const NAV2=[{id:"settings",label:"Settings",icon:"settings"}];
 
-function Sidebar({ page, setPage, alertCount, monitoring, userName, open, onClose }) {
+function Sidebar({ page, setPage, alertCount, monitoring, userName, open, onClose, msgCount=0 }) {
   const T=useT();
   const initials=userName?userName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"DR";
   const content=(
@@ -575,6 +575,12 @@ function Sidebar({ page, setPage, alertCount, monitoring, userName, open, onClos
               {n.id==="alerts"&&alertCount>0&&(
                 <span style={{background:active?"rgba(255,255,255,.25)":"#EF4444",color:"#fff",
                   fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:99}}>{alertCount}</span>
+              )}
+              {n.id==="patients"&&msgCount>0&&(
+                <span style={{background:active?"rgba(255,255,255,.25)":"#3B82F6",color:"#fff",
+                  fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:99,display:"flex",alignItems:"center",gap:3}}>
+                  💬{msgCount}
+                </span>
               )}
             </div>
           );
@@ -2429,6 +2435,9 @@ function DoctorApp({ onLogout, userName: initialName, dark, setDark }) {
   const [userName,setUserName]=useState(initialName);
   const [paletteOpen,setPaletteOpen]=useState(false);
   const [showShortcuts,setShowShortcuts]=useState(false);
+  const [unreadMsgs,setUnreadMsgs]=useState({}); // {patient_id: count}
+  const [msgToast,setMsgToast]=useState(null);   // {name, text}
+  const knownMsgIds=useRef({});                  // {patient_id: Set of ids}
   const streak=useRef({emotion:"Calm",count:0});
   const monRef=useRef(monitoring);
   useEffect(()=>{monRef.current=monitoring;},[monitoring]);
@@ -2448,6 +2457,39 @@ function DoctorApp({ onLogout, userName: initialName, dark, setDark }) {
     },8000);
     return()=>clearInterval(iv);
   },[]);
+
+  // Poll messages for all patients every 5s — show toast + badge on new patient messages
+  useEffect(()=>{
+    if(patients.length===0)return;
+    const poll=()=>{
+      patients.forEach(pat=>{
+        api.getMessages(pat.id).then(r=>{
+          const msgs=(r.messages||[]).filter(m=>m.sender_role==="Patient");
+          const known=knownMsgIds.current[pat.id]||(knownMsgIds.current[pat.id]=new Set());
+          const newOnes=msgs.filter(m=>!known.has(m.id));
+          if(newOnes.length>0){
+            newOnes.forEach(m=>known.add(m.id));
+            // only show badge/toast if not currently viewing this patient's chat
+            setUnreadMsgs(u=>({...u,[pat.id]:(u[pat.id]||0)+newOnes.length}));
+            setMsgToast({name:pat.name.split(" ")[0], text:newOnes[newOnes.length-1].content});
+            setTimeout(()=>setMsgToast(null),4000);
+          } else {
+            msgs.forEach(m=>known.add(m.id));
+          }
+        }).catch(()=>{});
+      });
+    };
+    // seed known IDs first without triggering notifications
+    patients.forEach(pat=>{
+      api.getMessages(pat.id).then(r=>{
+        const msgs=(r.messages||[]).filter(m=>m.sender_role==="Patient");
+        const known=knownMsgIds.current[pat.id]||(knownMsgIds.current[pat.id]=new Set());
+        msgs.forEach(m=>known.add(m.id));
+      }).catch(()=>{});
+    });
+    const iv2=setInterval(poll,5000);
+    return()=>clearInterval(iv2);
+  },[patients]);
 
   useEffect(()=>{
     if(!monitoring)return;
@@ -2542,7 +2584,8 @@ function DoctorApp({ onLogout, userName: initialName, dark, setDark }) {
   return (
     <div style={{display:"flex",height:"100vh",fontFamily:"Inter,system-ui,sans-serif",background:"var(--bg)"}}>
       <Sidebar page={page} setPage={goPage} alertCount={activeAlerts.length} monitoring={monitoring}
-        userName={userName} open={mobileOpen} onClose={()=>setMobileOpen(false)}/>
+        userName={userName} open={mobileOpen} onClose={()=>setMobileOpen(false)}
+        msgCount={Object.values(unreadMsgs).reduce((a,b)=>a+b,0)}/>
       <div data-main style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
         <TopBar title={TITLES[page]||page} monitoring={monitoring} userName={userName}
           onToggle={()=>{setMon(m=>!m);if(monitoring){setSecs(0);setBars([]);} }}
@@ -2559,6 +2602,23 @@ function DoctorApp({ onLogout, userName: initialName, dark, setDark }) {
         </div>
       </div>
       {toast&&<Toast msg={toast} onDone={()=>setToast(null)}/>}
+      {/* New message popup */}
+      {msgToast&&(
+        <div style={{position:"fixed",bottom:24,left:24,zIndex:9999,
+          background:"#fff",borderRadius:16,padding:"14px 18px",
+          boxShadow:"0 8px 32px rgba(9,48,149,.22)",border:"1px solid #E5E9F5",
+          display:"flex",alignItems:"center",gap:12,animation:"slideInRight .3s ease",
+          maxWidth:320}}>
+          <div style={{width:40,height:40,borderRadius:12,background:"linear-gradient(135deg,#093095,#3D73FF)",
+            display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18}}>💬</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:13,fontWeight:700,color:"#111827",marginBottom:2}}>New message from {msgToast.name}</div>
+            <div style={{fontSize:12,color:"#6B7280",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{msgToast.text}</div>
+          </div>
+          <button onClick={()=>setMsgToast(null)}
+            style={{background:"none",border:"none",cursor:"pointer",color:"#9CA3AF",fontSize:20,lineHeight:1,flexShrink:0}}>×</button>
+        </div>
+      )}
       <NeuroAssist patients={patients} alerts={alerts} monitoring={monitoring}
         sessionBars={sessionBars} setPage={goPage} setMon={setMon}/>
       <CommandPalette open={paletteOpen} onClose={()=>setPaletteOpen(false)}
