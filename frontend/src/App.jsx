@@ -2628,9 +2628,10 @@ function LoginPage({ onLogin }) {
       .signin-btn:hover{box-shadow:0 12px 32px rgba(11,47,151,.55)!important;transform:translateY(-1px);}
       .signin-btn{transition:all .18s ease!important;}
       @media(max-width:768px){
-        .login-left{display:none!important;}
-        .login-right{flex:1!important;width:100%!important;padding:32px 20px!important;}
         .login-wrap{flex-direction:column!important;}
+        .login-left{flex:none!important;width:100%!important;height:auto!important;padding:28px 24px 24px!important;}
+        .login-left .feat-card{padding:10px 6px!important;}
+        .login-right{flex:1!important;width:100%!important;padding:28px 20px!important;}
       }
     `}</style>
     <div className="login-wrap" style={{minHeight:"100vh",display:"flex",fontFamily:"'Inter',system-ui,sans-serif",overflow:"hidden",background:"#0B2F97"}}>
@@ -2664,7 +2665,7 @@ function LoginPage({ onLogin }) {
         <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20,position:"relative",zIndex:1,flexShrink:0}}>
           <div style={{width:44,height:44,borderRadius:13,
             background:"rgba(255,255,255,.15)",border:"1.5px solid rgba(255,255,255,.3)",
-            backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,
+            backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,
             boxShadow:"0 4px 16px rgba(0,0,0,.15)"}}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
           </div>
@@ -2687,7 +2688,7 @@ function LoginPage({ onLogin }) {
           borderRadius:24,
           background:"rgba(255,255,255,.11)",
           border:"1.5px solid rgba(255,255,255,.22)",
-          backdropFilter:"blur(16px)",
+          backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",
           boxShadow:"0 24px 64px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.2)",
           display:"flex",alignItems:"center",justifyContent:"center",
           overflow:"hidden",marginBottom:20}}>
