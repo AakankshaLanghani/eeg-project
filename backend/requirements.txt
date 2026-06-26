@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+reportlab
+xgboost
+scikit-learn
+scipy
+numpy
+pandas
+joblib
+bcrypt
+python-jose[cryptography]
