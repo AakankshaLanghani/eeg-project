@@ -618,7 +618,7 @@ function Sidebar({ page, setPage, alertCount, monitoring, userName, open, onClos
   );
   return (
     <>
-      <div style={{width:240,minWidth:240,height:"100vh",flexShrink:0,borderRight:`1px solid ${T.divider}`,
+      <div data-sidebar style={{width:240,minWidth:240,height:"100vh",flexShrink:0,borderRight:`1px solid ${T.divider}`,
         display:"flex",flexDirection:"column",position:"relative",zIndex:10,overflow:"hidden"}}>
         {content}
       </div>
@@ -2543,12 +2543,12 @@ function DoctorApp({ onLogout, userName: initialName, dark, setDark }) {
     <div style={{display:"flex",height:"100vh",fontFamily:"Inter,system-ui,sans-serif",background:"var(--bg)"}}>
       <Sidebar page={page} setPage={goPage} alertCount={activeAlerts.length} monitoring={monitoring}
         userName={userName} open={mobileOpen} onClose={()=>setMobileOpen(false)}/>
-      <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
+      <div data-main style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
         <TopBar title={TITLES[page]||page} monitoring={monitoring} userName={userName}
           onToggle={()=>{setMon(m=>!m);if(monitoring){setSecs(0);setBars([]);} }}
           alertCount={activeAlerts.length} alerts={alerts} onLogout={onLogout}
           onMenuClick={()=>setMobileOpen(true)} dark={dark} setDark={setDark}/>
-        <div style={{flex:1,overflowY:"auto",padding:"20px 20px 32px"}}>
+        <div data-page-content style={{flex:1,overflowY:"auto",padding:"20px 20px 32px"}}>
           {page==="dashboard"&&<DashboardPage monitoring={monitoring} alerts={alerts} patients={patients} classCount={classCount} stats={stats} onSelectPatient={p=>{setSelPat(p);setPage("patient-detail");}}/>}
           {page==="monitor"&&<MonitorPage monitoring={monitoring} emotion={emotion} confidence={conf} bands={bands} trend={trend} sessionTime={mm+":"+ss2} sessionBars={sessionBars} classCount={classCount} patients={patients}/>}
           {page==="patients"&&<PatientsPage patients={patients} loading={loadPat} onSelect={p=>{setSelPat(p);setPage("patient-detail");}}/>}

@@ -98,3 +98,145 @@ textarea, input, button, select { font-family: inherit; }
 .delay-2 { animation-delay: .10s; }
 .delay-3 { animation-delay: .15s; }
 .delay-4 { animation-delay: .20s; }
+
+/* ─── MOBILE RESPONSIVE ─── */
+@media (max-width: 768px) {
+
+  /* ── Sidebar: hidden by default, slides in as overlay ── */
+  [data-sidebar] {
+    position: fixed !important;
+    left: -260px !important;
+    top: 0 !important;
+    height: 100vh !important;
+    width: 240px !important;
+    z-index: 999 !important;
+    transition: left .25s ease !important;
+    box-shadow: 4px 0 24px rgba(0,0,0,.18) !important;
+  }
+  [data-sidebar="open"] {
+    left: 0 !important;
+  }
+
+  /* ── Main content full width ── */
+  [data-main] {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* ── TopBar ── */
+  [data-topbar] {
+    padding: 10px 14px !important;
+  }
+
+  /* ── Dashboard stat cards: 2 columns ── */
+  [data-stat-grid] {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  /* ── Patient cards: 1 column ── */
+  [data-patient-grid] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Content padding ── */
+  [data-page-content] {
+    padding: 14px 12px 80px !important;
+  }
+
+  /* ── Charts: full width ── */
+  [data-chart] {
+    width: 100% !important;
+    overflow-x: auto !important;
+  }
+
+  /* ── Tables: scrollable ── */
+  table {
+    display: block !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+  }
+
+  /* ── Modal: full screen on mobile ── */
+  [data-modal] {
+    width: 95vw !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* ── Patient detail: stack columns ── */
+  [data-detail-grid] {
+    flex-direction: column !important;
+  }
+
+  /* ── Hide non-essential desktop elements ── */
+  [data-desktop-only] {
+    display: none !important;
+  }
+
+  /* ── Bottom nav for mobile ── */
+  [data-bottom-nav] {
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    background: #fff !important;
+    border-top: 1px solid #E5E9F5 !important;
+    z-index: 100 !important;
+    padding: 8px 0 !important;
+  }
+
+  /* ── Font size scale down ── */
+  h1 { font-size: 20px !important; }
+  h2 { font-size: 17px !important; }
+  h3 { font-size: 15px !important; }
+
+  /* ── General cards full width ── */
+  [data-card] {
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* ── Flex rows become columns ── */
+  [data-flex-row] {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  /* ── Waveform chart responsive ── */
+  [data-waveform] {
+    height: 140px !important;
+  }
+
+  /* ── Alert list items ── */
+  [data-alert-item] {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+  }
+
+  /* ── Input fields full width ── */
+  input, select, textarea {
+    width: 100% !important;
+    font-size: 16px !important; /* prevents iOS zoom on focus */
+  }
+
+  /* ── Buttons readable on mobile ── */
+  button { min-height: 38px; }
+
+  /* ── Analytics page ── */
+  [data-analytics-grid] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  [data-stat-grid] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  [data-page-content] {
+    padding: 10px 10px 80px !important;
+  }
+}
