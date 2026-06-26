@@ -308,7 +308,7 @@ Full interactive docs: `https://aakankshaa13-neurotrack-backend.hf.space/docs`
 
 ## 👩‍💻 Developed By
 
-**Aakanksha Langhani** — Final Year Project, 2024–2025
+**Aakanksha Pardeep** — Final Year Project, 2025–2026
 
 ---
 
