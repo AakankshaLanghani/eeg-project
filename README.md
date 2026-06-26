@@ -1,4 +1,4 @@
-# 🧠 NeuroTrack — EEG-Based Emotion Recognition System
+# 🧠NeuroTrack — EEG-Based Emotion Recognition System
 
 <div align="center">
 
