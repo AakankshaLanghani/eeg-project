@@ -2458,37 +2458,40 @@ function DoctorApp({ onLogout, userName: initialName, dark, setDark }) {
     return()=>clearInterval(iv);
   },[]);
 
-  // Poll messages for all patients every 5s — show toast + badge on new patient messages
+  // Poll messages — seed first, then start polling for NEW ones
   useEffect(()=>{
     if(patients.length===0)return;
+    let iv2=null;
+    let cancelled=false;
+
     const poll=()=>{
       patients.forEach(pat=>{
         api.getMessages(pat.id).then(r=>{
           const msgs=(r.messages||[]).filter(m=>m.sender_role==="Patient");
-          const known=knownMsgIds.current[pat.id]||(knownMsgIds.current[pat.id]=new Set());
+          const known=knownMsgIds.current[pat.id];
+          if(!known)return;
           const newOnes=msgs.filter(m=>!known.has(m.id));
           if(newOnes.length>0){
             newOnes.forEach(m=>known.add(m.id));
-            // only show badge/toast if not currently viewing this patient's chat
             setUnreadMsgs(u=>({...u,[pat.id]:(u[pat.id]||0)+newOnes.length}));
             setMsgToast({name:pat.name.split(" ")[0], text:newOnes[newOnes.length-1].content});
-            setTimeout(()=>setMsgToast(null),4000);
-          } else {
-            msgs.forEach(m=>known.add(m.id));
+            setTimeout(()=>setMsgToast(null),5000);
           }
         }).catch(()=>{});
       });
     };
-    // seed known IDs first without triggering notifications
-    patients.forEach(pat=>{
+
+    // Seed all patients first, THEN start polling
+    Promise.all(patients.map(pat=>
       api.getMessages(pat.id).then(r=>{
         const msgs=(r.messages||[]).filter(m=>m.sender_role==="Patient");
-        const known=knownMsgIds.current[pat.id]||(knownMsgIds.current[pat.id]=new Set());
-        msgs.forEach(m=>known.add(m.id));
-      }).catch(()=>{});
+        knownMsgIds.current[pat.id]=new Set(msgs.map(m=>m.id));
+      }).catch(()=>{ knownMsgIds.current[pat.id]=new Set(); })
+    )).then(()=>{
+      if(!cancelled){ iv2=setInterval(poll,4000); }
     });
-    const iv2=setInterval(poll,5000);
-    return()=>clearInterval(iv2);
+
+    return()=>{ cancelled=true; if(iv2)clearInterval(iv2); };
   },[patients]);
 
   useEffect(()=>{
