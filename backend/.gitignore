@@ -1,9 +1,0 @@
-__pycache__/
-*.pyc
-*.pyo
-venv/
-backend/venv/
-node_modules/
-dist/
-.vite/
-.env
